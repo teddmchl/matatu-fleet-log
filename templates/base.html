@@ -1,3 +1,20 @@
+{% comment %}
+================================================================================
+PROJECT-LEVEL TEMPLATE (templates/base.html)
+================================================================================
+Role in MVT:
+  The master layout skeleton for the entire application.
+
+Key Concepts for Lecturer:
+  1. Discovery:
+     Found because config/settings.py specifies:
+     TEMPLATES['DIRS'] = [BASE_DIR / 'templates']
+  2. Template Inheritance (DRY principle):
+     Defines structural HTML (<html>, <head>, <header>, <main>, <footer>)
+     and leaves placeholder blocks ({% block title %}, {% block content %})
+     for child templates to populate.
+================================================================================
+{% endcomment %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +28,7 @@
         <p>Daily returns for drivers, owners and SACCOs</p>
     </header>
     <main>
+        {# Child templates override this block to inject page-specific content #}
         {% block content %}{% endblock %}
     </main>
     <footer>
@@ -18,3 +36,4 @@
     </footer>
 </body>
 </html>
+

@@ -20,23 +20,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# Auto-generated dev key with 'django-insecure-'.
+# In Week 9 (Security), this will be loaded from an environment variable via python-dotenv / .env
 SECRET_KEY = 'django-insecure-#h@it)y2*dy$9^ig5fakqoc%5&6nyg%+&f$qvs#!1o6bl37nh-'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# True gives detailed error tracebacks during development. Must be False in production
+# to avoid leaking sensitive server internals to visitors.
 DEBUG = True
 
+# When DEBUG=True, localhost/127.0.0.1 is allowed automatically.
+# In production, specific domain names (e.g., 'matatufleet.co.ke') must be listed
+# here to defend against HTTP Host Header injection attacks.
 ALLOWED_HOSTS = []
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    # Built-in Django core apps
+    'django.contrib.admin',         # Admin management interface
+    'django.contrib.auth',          # Authentication system (users, groups, permissions)
+    'django.contrib.contenttypes',  # Generic relationship framework
+    'django.contrib.sessions',      # Session management across requests
+    'django.contrib.messages',      # Cookie/session-based message notifications
+    'django.contrib.staticfiles',   # Manages static assets (CSS, JS, images)
+
+    # Custom Semester Project Apps
+    # Registering 'fleet' tells Django to discover its models, migrations, and templates
     'fleet',
 ]
 
@@ -50,12 +61,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Root URL configuration module that Django consults first
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        # DIRS: Directories where Django looks for project-wide templates (e.g. templates/base.html)
         'DIRS': [BASE_DIR / 'templates'],
+        # APP_DIRS: If True, Django automatically searches <app>/templates/ inside each installed app
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,13 +86,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
+# SQLite is used for local development. We migrate to PostgreSQL in Week 6.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 
 
 # Password validation

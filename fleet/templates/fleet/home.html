@@ -1,3 +1,23 @@
+{% comment %}
+================================================================================
+APP-LEVEL TEMPLATE (fleet/templates/fleet/home.html)
+================================================================================
+Role in MVT:
+  The specific view template rendered by fleet.views.home.
+
+Key Concepts for Lecturer:
+  1. Discovery:
+     Found because config/settings.py has APP_DIRS = True, which tells Django
+     to search the "templates/" subfolder of every app in INSTALLED_APPS.
+  2. Template Namespacing (Why "fleet/templates/fleet/"):
+     Django pools all app templates together. Creating an inner folder named
+     after the app ("templates/fleet/home.html") prevents name collisions if
+     another app also defines a "home.html".
+  3. Inheritance ({% extends "base.html" %}):
+     Inherits the overall structure from the project-level templates/base.html
+     and overrides the title and content blocks with fleet-specific HTML.
+================================================================================
+{% endcomment %}
 {% extends "base.html" %}
 
 {% block title %}Home | Matatu Fleet Log{% endblock %}
@@ -12,3 +32,4 @@
 </ul>
 <small>App-level template: fleet/templates/fleet/home.html</small>
 {% endblock %}
+

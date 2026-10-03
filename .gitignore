@@ -1,6 +1,25 @@
+# ==============================================================================
+# GITIGNORE: Excluded Files and Directories (Lab 1 Requirement)
+# ==============================================================================
+
+# Virtual Environment:
+# Heavy dependencies (hundreds of MBs), OS/machine-specific binaries.
+# Reproducible on another machine using requirements.txt or pip install django.
 .venv/
 venv/
+
+# Compiled Python Bytecode:
+# Machine-generated cache files created by Python interpreter during runtime.
 __pycache__/
 *.pyc
+
+# Local Database:
+# Contains local development test data. Database schema history is tracked
+# through version-controlled migration files, not binary SQLite files.
 db.sqlite3
+
+# Environment Secrets:
+# Holds secret keys, API tokens, and production database passwords.
+# Secrets must NEVER be committed to public/remote version control.
 .env
+

@@ -1,23 +1,28 @@
-"""
-URL configuration for config project.
+# ==============================================================================
+# PROJECT ROOT URLCONF (config/urls.py)
+# ==============================================================================
+# Role in MVT:
+#   Entry point for all incoming HTTP requests into the Django application.
+#
+# Request Flow Step 1:
+#   1. Browser requests "GET /"
+#   2. Django matches against ROOT_URLCONF ('config.urls').
+#   3. 'admin/' -> routes to Django's built-in administration site.
+#   4. '' (root) -> include('fleet.urls') delegates routing to the fleet app.
+#
+# Key Concepts for Lecturer:
+#   - Why include()? Decouples application routing from project configuration.
+#     The 'fleet' app remains self-contained and pluggable into any Django project.
+# ==============================================================================
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    # Built-in Django admin interface (proves auth/sessions apps are active)
     path('admin/', admin.site.urls),
+
+    # Delegate all root and sub-paths to the 'fleet' app URLconf
     path('', include('fleet.urls')),
 ]
+
