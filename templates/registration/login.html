@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% comment %}
+Rendered by django.contrib.auth.views.LoginView, which looks for
+"registration/login.html" by default. On success it calls login(), which
+stores the user's id in the session, then redirects to ?next= or LOGIN_REDIRECT_URL.
+{% endcomment %}
+
+{% block title %}Log in | Matatu Fleet Log{% endblock %}
+
+{% block content %}
+<h2>Log in</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit">Log in</button>
+</form>
+<p>No account? <a href="{% url 'fleet:signup' %}">Sign up</a></p>
+{% endblock %}

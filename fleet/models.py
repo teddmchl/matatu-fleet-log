@@ -1,22 +1,88 @@
 # ==============================================================================
 # APP MODELS (fleet/models.py)
 # ==============================================================================
-# Role in MVT:
-#   The 'M' (Model) in Django's Model-View-Template architecture.
-#   Defines the database schema using Python classes (Django ORM).
+# Two tables plus Django's built-in User:
 #
-# Lab 1 Status:
-#   Empty for now. Scaffolding and routing only.
+#   User (django.contrib.auth) 1 ──< Vehicle 1 ──< DailyReturn >── 1 User (driver)
 #
-# Planned Semester Project Models (Week 6 - PostgreSQL & ORM):
-#   - Sacco: Matatu SACCO or operator details
-#   - Vehicle: Registration plate, route number, seating capacity, owner foreign key
-#   - Driver: Profile linked to auth.User, license number, active vehicle
-#   - DailyReturn: Date, vehicle, driver, passenger collections, gross revenue
-#   - Expense: Fuel cost, county council levies, SACCO fee, vehicle repairs
+#   - Vehicle.owner      ForeignKey -> User   (an owner can have many matatus)
+#   - DailyReturn.vehicle ForeignKey -> Vehicle (a matatu has one return per day)
+#   - DailyReturn.recorded_by ForeignKey -> User (who logged it)
 # ==============================================================================
 
+from decimal import Decimal
+
+from django.conf import settings
 from django.db import models
+from django.urls import reverse
 
-# Models will be added here in Week 6
 
+class Vehicle(models.Model):
+    """A matatu registered by an owner."""
+
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("garage", "In the garage"),
+        ("retired", "Retired"),
+    ]
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,  # delete the owner -> their vehicles go too
+        related_name="vehicles",
+    )
+    plate = models.CharField("number plate", max_length=10, unique=True)
+    route = models.CharField(max_length=60, help_text="e.g. 46 Kawangware - Town")
+    capacity = models.PositiveSmallIntegerField(default=14)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["plate"]
+
+    def __str__(self):
+        return f"{self.plate} ({self.route})"
+
+
+class DailyReturn(models.Model):
+    """What one vehicle collected and spent on one day."""
+
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name="returns",
+    )
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,  # keep the audit trail: can't delete a user who logged returns
+        related_name="returns_recorded",
+    )
+    date = models.DateField()
+    trips = models.PositiveSmallIntegerField(default=0)
+    collections = models.DecimalField(max_digits=9, decimal_places=2, help_text="Fares collected (KES)")
+    fuel = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal("0"))
+    other_expenses = models.DecimalField(
+        max_digits=9,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="SACCO fee, parking, repairs (KES)",
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "vehicle__plate"]
+        constraints = [
+            models.UniqueConstraint(fields=["vehicle", "date"], name="one_return_per_vehicle_per_day"),
+        ]
+
+    def __str__(self):
+        return f"{self.vehicle.plate} on {self.date}"
+
+    @property
+    def net(self):
+        """Collections minus all expenses."""
+        return self.collections - self.fuel - self.other_expenses
+
+    def get_absolute_url(self):
+        return reverse("fleet:return_edit", args=[self.pk])

@@ -1,35 +1,22 @@
-{% comment %}
-================================================================================
-APP-LEVEL TEMPLATE (fleet/templates/fleet/home.html)
-================================================================================
-Role in MVT:
-  The specific view template rendered by fleet.views.home.
-
-Key Concepts for Lecturer:
-  1. Discovery:
-     Found because config/settings.py has APP_DIRS = True, which tells Django
-     to search the "templates/" subfolder of every app in INSTALLED_APPS.
-  2. Template Namespacing (Why "fleet/templates/fleet/"):
-     Django pools all app templates together. Creating an inner folder named
-     after the app ("templates/fleet/home.html") prevents name collisions if
-     another app also defines a "home.html".
-  3. Inheritance ({% extends "base.html" %}):
-     Inherits the overall structure from the project-level templates/base.html
-     and overrides the title and content blocks with fleet-specific HTML.
-================================================================================
-{% endcomment %}
 {% extends "base.html" %}
 
 {% block title %}Home | Matatu Fleet Log{% endblock %}
 
 {% block content %}
-<h2>Welcome</h2>
-<p>Track what every vehicle earned and spent each day.</p>
-<ul>
-    <li><strong>Drivers</strong> log trips, collections, fuel and expenses.</li>
-    <li><strong>Owners</strong> see revenue and cost per vehicle.</li>
-    <li><strong>SACCO admins</strong> see the whole fleet.</li>
-</ul>
-<small>App-level template: fleet/templates/fleet/home.html</small>
+{% if user.is_authenticated %}
+    <h2>Your fleet</h2>
+    <ul>
+        <li>Vehicles: <strong>{{ vehicle_count }}</strong></li>
+        <li>Daily returns logged: <strong>{{ return_count }}</strong></li>
+        <li>Total collections: <strong>KES {{ total_collections|floatformat:2 }}</strong></li>
+    </ul>
+    <p>
+        <a href="{% url 'fleet:return_new' %}">Log today's return</a> ·
+        <a href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>
+    </p>
+{% else %}
+    <h2>Welcome</h2>
+    <p>Track what every matatu earned and spent each day.</p>
+    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'fleet:signup' %}">create an account</a> to start.</p>
+{% endif %}
 {% endblock %}
-

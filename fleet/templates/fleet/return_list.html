@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Daily returns | Matatu Fleet Log{% endblock %}
+
+{% block content %}
+<h2>Daily returns</h2>
+<p><a href="{% url 'fleet:return_new' %}">+ Log a return</a></p>
+<table>
+    <tr>
+        <th>Date</th><th>Vehicle</th><th class="num">Trips</th>
+        <th class="num">Collections</th><th class="num">Fuel</th><th class="num">Other</th><th class="num">Net</th><th></th>
+    </tr>
+    {% for r in returns %}
+    <tr>
+        <td>{{ r.date }}</td>
+        <td>{{ r.vehicle.plate }}</td>
+        <td class="num">{{ r.trips }}</td>
+        <td class="num">{{ r.collections|floatformat:2 }}</td>
+        <td class="num">{{ r.fuel|floatformat:2 }}</td>
+        <td class="num">{{ r.other_expenses|floatformat:2 }}</td>
+        <td class="num"><strong>{{ r.net|floatformat:2 }}</strong></td>
+        <td><a href="{% url 'fleet:return_edit' r.pk %}">Edit</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">No returns logged yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

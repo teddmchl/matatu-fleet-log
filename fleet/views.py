@@ -1,26 +1,121 @@
 # ==============================================================================
 # APP VIEWS (fleet/views.py)
 # ==============================================================================
-# Role in MVT:
-#   The 'V' (View) in Django's Model-View-Template architecture.
-#   A view is a Python callable that takes an HttpRequest object and returns an
-#   HttpResponse object (rendered HTML, JSON, redirect, or 404).
+# Authentication:
+#   - login/logout use Django's built-in LoginView/LogoutView (config/urls.py)
+#   - signup() creates the user, then login() starts their session
+#   - @login_required sends anonymous users to settings.LOGIN_URL
 #
-# Request Flow Step 3:
-#   1. fleet/urls.py routes the request here: home(request).
-#   2. render() takes the request, locates "fleet/home.html" using Django's
-#      template loaders, compiles the context, and returns an HttpResponse (200 OK).
-#   3. In later weeks, this view will query models (e.g. DailyReturn, Vehicle)
-#      and pass querysets into the template context dictionary.
+# Authorisation:
+#   - every query is filtered by request.user, so you only ever see your own
+#     vehicles and returns; anyone else's id returns 404 (get_object_or_404)
+#
+# Sessions:
+#   - request.session["last_vehicle_id"] remembers the vehicle you last logged,
+#     so the next "new return" form starts on it
 # ==============================================================================
 
-from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import DailyReturnForm, SignUpForm, VehicleForm
+from .models import DailyReturn, Vehicle
+
+LAST_VEHICLE_KEY = "last_vehicle_id"
 
 
 def home(request):
-    """
-    Landing page for the fleet daily-returns log.
-    Renders the app-level template fleet/templates/fleet/home.html.
-    """
-    return render(request, "fleet/home.html")
+    """Public landing page; shows a summary once you are logged in."""
+    context = {}
+    if request.user.is_authenticated:
+        returns = DailyReturn.objects.filter(vehicle__owner=request.user)
+        context = {
+            "vehicle_count": request.user.vehicles.count(),
+            "return_count": returns.count(),
+            "total_collections": returns.aggregate(total=Sum("collections"))["total"] or 0,
+        }
+    return render(request, "fleet/home.html", context)
 
+
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect("fleet:home")
+    if request.method == "POST":
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # creates the session and sets the session cookie
+            messages.success(request, f"Welcome, {user.username}. Add your first vehicle.")
+            return redirect("fleet:vehicle_new")
+    else:
+        form = SignUpForm()
+    return render(request, "registration/signup.html", {"form": form})
+
+
+@login_required
+def vehicle_list(request):
+    vehicles = request.user.vehicles.all()
+    return render(request, "fleet/vehicle_list.html", {"vehicles": vehicles})
+
+
+@login_required
+def vehicle_new(request):
+    if request.method == "POST":
+        form = VehicleForm(request.POST)
+        if form.is_valid():
+            vehicle = form.save(commit=False)
+            vehicle.owner = request.user  # set server-side, never from the form
+            vehicle.save()
+            messages.success(request, f"{vehicle.plate} added.")
+            return redirect("fleet:vehicle_list")
+    else:
+        form = VehicleForm()
+    return render(request, "fleet/form.html", {"form": form, "title": "Add a vehicle"})
+
+
+@login_required
+def vehicle_edit(request, pk: int):
+    vehicle = get_object_or_404(Vehicle, pk=pk, owner=request.user)
+    form = VehicleForm(request.POST or None, instance=vehicle)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"{vehicle.plate} updated.")
+        return redirect("fleet:vehicle_list")
+    return render(request, "fleet/form.html", {"form": form, "title": f"Edit {vehicle.plate}"})
+
+
+@login_required
+def return_list(request):
+    returns = DailyReturn.objects.filter(vehicle__owner=request.user).select_related("vehicle")
+    return render(request, "fleet/return_list.html", {"returns": returns})
+
+
+@login_required
+def return_new(request):
+    if request.method == "POST":
+        form = DailyReturnForm(request.POST, user=request.user)
+        if form.is_valid():
+            daily_return = form.save(commit=False)
+            daily_return.recorded_by = request.user
+            daily_return.save()
+            request.session[LAST_VEHICLE_KEY] = daily_return.vehicle_id
+            messages.success(request, f"Return for {daily_return} saved. Net KES {daily_return.net:,.2f}.")
+            return redirect("fleet:return_list")
+    else:
+        initial = {"vehicle": request.session.get(LAST_VEHICLE_KEY)}
+        form = DailyReturnForm(user=request.user, initial=initial)
+    return render(request, "fleet/form.html", {"form": form, "title": "Log a daily return"})
+
+
+@login_required
+def return_edit(request, pk: int):
+    daily_return = get_object_or_404(DailyReturn, pk=pk, vehicle__owner=request.user)
+    form = DailyReturnForm(request.POST or None, instance=daily_return, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Return for {daily_return} updated.")
+        return redirect("fleet:return_list")
+    return render(request, "fleet/form.html", {"form": form, "title": f"Edit return: {daily_return}"})

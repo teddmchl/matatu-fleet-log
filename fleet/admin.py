@@ -1,15 +1,25 @@
 # ==============================================================================
-# APP ADMIN (fleet/admin.py)
+# ADMIN (fleet/admin.py)
 # ==============================================================================
-# Role:
-#   Registers custom models with Django's built-in administration site (/admin/).
-#
-# Lab 1 Status:
-#   Empty for now. When models are created in Week 6, we register them here
-#   (e.g., admin.site.register(Vehicle)) to enable CRUD interfaces in /admin/.
+# Registers the models so a superuser can manage them at /admin/.
+# list_display = columns, search_fields = search box, list_filter = sidebar filters.
 # ==============================================================================
 
 from django.contrib import admin
 
-# Register models here after Week 6 models creation
+from .models import DailyReturn, Vehicle
 
+
+@admin.register(Vehicle)
+class VehicleAdmin(admin.ModelAdmin):
+    list_display = ("plate", "route", "capacity", "status", "owner")
+    search_fields = ("plate", "route", "owner__username")
+    list_filter = ("status",)
+
+
+@admin.register(DailyReturn)
+class DailyReturnAdmin(admin.ModelAdmin):
+    list_display = ("date", "vehicle", "trips", "collections", "fuel", "other_expenses", "net", "recorded_by")
+    search_fields = ("vehicle__plate",)
+    list_filter = ("date", "vehicle")
+    date_hierarchy = "date"

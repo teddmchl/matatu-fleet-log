@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,12 +23,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # Auto-generated dev key with 'django-insecure-'.
 # In Week 9 (Security), this will be loaded from an environment variable via python-dotenv / .env
-SECRET_KEY = 'django-insecure-#h@it)y2*dy$9^ig5fakqoc%5&6nyg%+&f$qvs#!1o6bl37nh-'
+# Read from the environment; the fallback is only for local development.
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-#h@it)y2*dy$9^ig5fakqoc%5&6nyg%+&f$qvs#!1o6bl37nh-',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # True gives detailed error tracebacks during development. Must be False in production
 # to avoid leaking sensitive server internals to visitors.
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
 # When DEBUG=True, localhost/127.0.0.1 is allowed automatically.
 # In production, specific domain names (e.g., 'matatufleet.co.ke') must be listed
@@ -120,7 +125,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
@@ -136,8 +141,17 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# Password-reset emails are printed to the terminal during development.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# ------------------------------------------------------------------------------
+# Authentication & sessions
+# ------------------------------------------------------------------------------
+LOGIN_URL = 'login'                  # where @login_required sends anonymous users
+LOGIN_REDIRECT_URL = 'fleet:home'    # after a successful login
+LOGOUT_REDIRECT_URL = 'fleet:home'   # after logout
+
+# Sessions are stored in the database (django_session table, the default).
+SESSION_COOKIE_AGE = 60 * 60 * 8         # a login lasts one 8-hour shift
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True   # shared phones/cyber PCs: closing the browser logs you out
+SESSION_COOKIE_HTTPONLY = True           # JavaScript can't read the session cookie

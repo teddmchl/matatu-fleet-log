@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% comment %}
+One template for every create/edit form. form.as_p renders the fields and
+their validation errors; non_field_errors shows errors raised in clean().
+{% endcomment %}
+
+{% block title %}{{ title }} | Matatu Fleet Log{% endblock %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+<form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+{% endblock %}
