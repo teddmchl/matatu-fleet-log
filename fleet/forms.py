@@ -1,7 +1,6 @@
 # ==============================================================================
 # FORMS (fleet/forms.py)
 # ==============================================================================
-#   SignUpForm      - extends Django's UserCreationForm (hashes the password)
 #   VehicleForm     - ModelForm; clean_plate() normalises the plate
 #   DailyReturnForm - ModelForm; only offers the user's own vehicles,
 #                     clean_date() blocks future dates, clean() checks totals
@@ -10,7 +9,6 @@
 import re
 
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -18,14 +16,6 @@ from .models import DailyReturn, Vehicle
 
 # Kenyan plates: KAA 123A style (3 letters, 3 digits, optional letter)
 PLATE_PATTERN = re.compile(r"^K[A-Z]{2}\d{3}[A-Z]?$")
-
-
-class SignUpForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-
-    class Meta:
-        model = User
-        fields = ["username", "email"]
 
 
 class VehicleForm(forms.ModelForm):

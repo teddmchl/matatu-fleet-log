@@ -52,8 +52,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',   # Manages static assets (CSS, JS, images)
 
     # Custom Semester Project Apps
-    # Registering 'fleet' tells Django to discover its models, migrations, and templates
-    'fleet',
+    # Registering an app tells Django to discover its models, migrations, and templates
+    'accounts',  # sign-up, login/logout templates, profile + session page
+    'fleet',     # vehicles and daily returns (models, forms, CRUD)
+    'reports',   # read-only per-vehicle totals
 ]
 
 MIDDLEWARE = [

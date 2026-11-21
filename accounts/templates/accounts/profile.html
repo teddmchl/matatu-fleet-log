@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Your account | Matatu Fleet Log{% endblock %}
+
+{% block content %}
+<h2>Your account</h2>
+<ul>
+    <li>Username: <strong>{{ user.username }}</strong></li>
+    <li>Email: {{ user.email|default:"not set" }}</li>
+    <li>Member since: {{ user.date_joined|date:"j M Y" }}</li>
+    <li>Last login: {{ user.last_login|date:"j M Y, H:i" }}</li>
+</ul>
+
+<h3>This session</h3>
+<ul>
+    <li>Expires: {{ session_expires|date:"j M Y, H:i" }}{% if expires_at_browser_close %} or when you close the browser{% endif %}</li>
+    <li>Last vehicle remembered: {{ last_vehicle_id|default:"none yet" }}</li>
+</ul>
+<p><a href="{% url 'password_change' %}">Change password</a></p>
+{% endblock %}

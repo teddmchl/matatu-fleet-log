@@ -12,7 +12,6 @@ app_name = "fleet"
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("signup/", views.signup, name="signup"),
     path("vehicles/", views.vehicle_list, name="vehicle_list"),
     path("vehicles/new/", views.vehicle_new, name="vehicle_new"),
     path("vehicles/<int:pk>/edit/", views.vehicle_edit, name="vehicle_edit"),

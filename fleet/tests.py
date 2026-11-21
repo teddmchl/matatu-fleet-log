@@ -1,4 +1,4 @@
-"""Tests for models, forms, authentication and sessions. Run: python manage.py test"""
+"""Fleet app tests: models, forms, access control and sessions. Run: python manage.py test"""
 
 import datetime
 from decimal import Decimal
@@ -77,25 +77,10 @@ class FormTests(FleetTestCase):
         self.assertIn("trips", form.errors)
 
 
-class AuthTests(FleetTestCase):
+class AccessControlTests(FleetTestCase):
     def test_anonymous_user_is_sent_to_login(self):
         response = self.client.get(reverse("fleet:return_list"))
         self.assertRedirects(response, f"{reverse('login')}?next={reverse('fleet:return_list')}")
-
-    def test_signup_logs_the_user_in(self):
-        response = self.client.post(reverse("fleet:signup"), {
-            "username": "kamau", "email": "kamau@example.com",
-            "password1": "matatu-rocks-2026", "password2": "matatu-rocks-2026",
-        })
-        self.assertRedirects(response, reverse("fleet:vehicle_new"))
-        self.assertIn("_auth_user_id", self.client.session)
-
-    def test_login_and_logout(self):
-        response = self.client.post(reverse("login"), {"username": "wanjiku", "password": "strong-pass-123"})
-        self.assertRedirects(response, reverse("fleet:home"))
-        self.assertEqual(int(self.client.session["_auth_user_id"]), self.owner.pk)
-        self.client.post(reverse("logout"))
-        self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_cannot_edit_another_users_return(self):
         theirs = DailyReturn.objects.create(

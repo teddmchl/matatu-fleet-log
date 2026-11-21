@@ -17,6 +17,6 @@
 {% else %}
     <h2>Welcome</h2>
     <p>Track what every matatu earned and spent each day.</p>
-    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'fleet:signup' %}">create an account</a> to start.</p>
+    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'accounts:signup' %}">create an account</a> to start.</p>
 {% endif %}
 {% endblock %}

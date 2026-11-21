@@ -2,8 +2,7 @@
 # APP VIEWS (fleet/views.py)
 # ==============================================================================
 # Authentication:
-#   - login/logout use Django's built-in LoginView/LogoutView (config/urls.py)
-#   - signup() creates the user, then login() starts their session
+#   - sign-up, login and logout live in the accounts app
 #   - @login_required sends anonymous users to settings.LOGIN_URL
 #
 # Authorisation:
@@ -16,12 +15,11 @@
 # ==============================================================================
 
 from django.contrib import messages
-from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import DailyReturnForm, SignUpForm, VehicleForm
+from .forms import DailyReturnForm, VehicleForm
 from .models import DailyReturn, Vehicle
 
 LAST_VEHICLE_KEY = "last_vehicle_id"
@@ -38,21 +36,6 @@ def home(request):
             "total_collections": returns.aggregate(total=Sum("collections"))["total"] or 0,
         }
     return render(request, "fleet/home.html", context)
-
-
-def signup(request):
-    if request.user.is_authenticated:
-        return redirect("fleet:home")
-    if request.method == "POST":
-        form = SignUpForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)  # creates the session and sets the session cookie
-            messages.success(request, f"Welcome, {user.username}. Add your first vehicle.")
-            return redirect("fleet:vehicle_new")
-    else:
-        form = SignUpForm()
-    return render(request, "registration/signup.html", {"form": form})
 
 
 @login_required
