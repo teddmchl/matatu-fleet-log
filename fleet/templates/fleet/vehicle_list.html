@@ -13,7 +13,7 @@
         <td>{{ vehicle.route }}</td>
         <td class="num">{{ vehicle.capacity }}</td>
         <td>{{ vehicle.get_status_display }}</td>
-        <td><a href="{% url 'fleet:vehicle_edit' vehicle.pk %}">Edit</a></td>
+        <td><a href="{% url 'fleet:vehicle_edit' vehicle.pk %}">Edit</a> · <a href="{% url 'fleet:vehicle_delete' vehicle.pk %}">Delete</a></td>
     </tr>
     {% empty %}
     <tr><td colspan="5">No vehicles yet.</td></tr>

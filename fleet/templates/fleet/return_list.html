@@ -19,7 +19,7 @@
         <td class="num">{{ r.fuel|floatformat:2 }}</td>
         <td class="num">{{ r.other_expenses|floatformat:2 }}</td>
         <td class="num"><strong>{{ r.net|floatformat:2 }}</strong></td>
-        <td><a href="{% url 'fleet:return_edit' r.pk %}">Edit</a></td>
+        <td><a href="{% url 'fleet:return_edit' r.pk %}">Edit</a> · <a href="{% url 'fleet:return_delete' r.pk %}">Delete</a></td>
     </tr>
     {% empty %}
     <tr><td colspan="8">No returns logged yet.</td></tr>

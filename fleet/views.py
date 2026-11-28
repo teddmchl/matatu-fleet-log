@@ -9,6 +9,10 @@
 #   - every query is filtered by request.user, so you only ever see your own
 #     vehicles and returns; anyone else's id returns 404 (get_object_or_404)
 #
+# Deleting:
+#   - the delete views show a confirm page on GET and only delete on POST, so a
+#     link (or a crawler following one) can never remove data by itself
+#
 # Sessions:
 #   - request.session["last_vehicle_id"] remembers the vehicle you last logged,
 #     so the next "new return" form starts on it
@@ -71,6 +75,22 @@ def vehicle_edit(request, pk: int):
 
 
 @login_required
+def vehicle_delete(request, pk: int):
+    vehicle = get_object_or_404(Vehicle, pk=pk, owner=request.user)
+    if request.method == "POST":
+        plate = vehicle.plate
+        vehicle.delete()  # its daily returns go too (on_delete=CASCADE)
+        messages.success(request, f"{plate} deleted.")
+        return redirect("fleet:vehicle_list")
+    context = {
+        "object": vehicle,
+        "warning": f"This also deletes its {vehicle.returns.count()} daily return(s).",
+        "cancel_url": "fleet:vehicle_list",
+    }
+    return render(request, "fleet/confirm_delete.html", context)
+
+
+@login_required
 def return_list(request):
     returns = DailyReturn.objects.filter(vehicle__owner=request.user).select_related("vehicle")
     return render(request, "fleet/return_list.html", {"returns": returns})
@@ -102,3 +122,15 @@ def return_edit(request, pk: int):
         messages.success(request, f"Return for {daily_return} updated.")
         return redirect("fleet:return_list")
     return render(request, "fleet/form.html", {"form": form, "title": f"Edit return: {daily_return}"})
+
+
+@login_required
+def return_delete(request, pk: int):
+    daily_return = get_object_or_404(DailyReturn, pk=pk, vehicle__owner=request.user)
+    if request.method == "POST":
+        label = str(daily_return)
+        daily_return.delete()
+        messages.success(request, f"Return for {label} deleted.")
+        return redirect("fleet:return_list")
+    context = {"object": daily_return, "cancel_url": "fleet:return_list"}
+    return render(request, "fleet/confirm_delete.html", context)

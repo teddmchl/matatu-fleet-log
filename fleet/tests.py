@@ -122,3 +122,49 @@ class SessionAndCrudTests(FleetTestCase):
             "plate": "KDC 777D", "route": "58 Buruburu - Town", "capacity": 33, "status": "active",
         })
         self.assertEqual(Vehicle.objects.get(plate="KDC 777D").owner, self.owner)
+
+
+class DeleteTests(FleetTestCase):
+    def setUp(self):
+        super().setUp()
+        self.mine = DailyReturn.objects.create(
+            vehicle=self.vehicle, recorded_by=self.owner, date=timezone.localdate(),
+            collections=Decimal("100"), trips=1,
+        )
+
+    def test_anonymous_user_cannot_reach_delete(self):
+        url = reverse("fleet:return_delete", args=[self.mine.pk])
+        response = self.client.post(url)
+        self.assertRedirects(response, f"{reverse('login')}?next={url}")
+        self.assertTrue(DailyReturn.objects.filter(pk=self.mine.pk).exists())
+
+    def test_get_shows_confirm_page_and_deletes_nothing(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("fleet:return_delete", args=[self.mine.pk]))
+        self.assertContains(response, "Yes, delete")
+        self.assertTrue(DailyReturn.objects.filter(pk=self.mine.pk).exists())
+
+    def test_owner_can_delete_return(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("fleet:return_delete", args=[self.mine.pk]))
+        self.assertRedirects(response, reverse("fleet:return_list"))
+        self.assertFalse(DailyReturn.objects.filter(pk=self.mine.pk).exists())
+
+    def test_owner_can_delete_vehicle_and_its_returns(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("fleet:vehicle_delete", args=[self.vehicle.pk]))
+        self.assertRedirects(response, reverse("fleet:vehicle_list"))
+        self.assertFalse(Vehicle.objects.filter(pk=self.vehicle.pk).exists())
+        self.assertEqual(DailyReturn.objects.count(), 0)
+
+    def test_cannot_delete_another_users_vehicle(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("fleet:vehicle_delete", args=[self.other_vehicle.pk]))
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Vehicle.objects.filter(pk=self.other_vehicle.pk).exists())
+
+    def test_cannot_delete_another_users_return(self):
+        self.client.force_login(self.other)
+        response = self.client.post(reverse("fleet:return_delete", args=[self.mine.pk]))
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(DailyReturn.objects.filter(pk=self.mine.pk).exists())
