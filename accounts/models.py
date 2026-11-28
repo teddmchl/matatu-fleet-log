@@ -57,5 +57,5 @@ class Profile(models.Model):
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):
     """Ensure every newly created User has a Profile row."""
-    if created:
+    if created and not kwargs.get("raw"):
         Profile.objects.get_or_create(user=instance)

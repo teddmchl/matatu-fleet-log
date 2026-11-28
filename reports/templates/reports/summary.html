@@ -3,22 +3,25 @@
 {% block title %}Reports | Matatu Fleet Log{% endblock %}
 
 {% block content %}
-<h2>Fleet report</h2>
-<p>
-    Period:
-    <a href="?period=7">{% if period == "7" %}<strong>last 7 days</strong>{% else %}last 7 days{% endif %}</a> ·
-    <a href="?period=30">{% if period == "30" %}<strong>last 30 days</strong>{% else %}last 30 days{% endif %}</a> ·
-    <a href="?period=all">{% if period == "all" %}<strong>all time</strong>{% else %}all time{% endif %}</a>
-</p>
+<div class="page-head">
+    <h2>{% if is_sacco_admin %}Whole-fleet report{% else %}Fleet report{% endif %}</h2>
+    <div class="period-bar" role="navigation" aria-label="Report period">
+        <a href="?period=7"{% if period == "7" %} class="active"{% endif %}>Last 7 days</a>
+        <a href="?period=30"{% if period == "30" %} class="active"{% endif %}>Last 30 days</a>
+        <a href="?period=all"{% if period == "all" %} class="active"{% endif %}>All time</a>
+    </div>
+</div>
 <div class="table-wrap">
 <table>
     <tr>
-        <th>Vehicle</th><th class="num">Days logged</th><th class="num">Trips</th>
+        <th>Vehicle</th>{% if is_sacco_admin %}<th>Owner</th>{% endif %}<th>Driver</th><th class="num">Days logged</th><th class="num">Trips</th>
         <th class="num">Collections</th><th class="num">Expenses</th><th class="num">Net</th>
     </tr>
     {% for v in vehicles %}
     <tr>
-        <td>{{ v.plate }}</td>
+        <td class="nowrap plate">{{ v.plate }}</td>
+        {% if is_sacco_admin %}<td>{{ v.owner.username }}</td>{% endif %}
+        <td>{{ v.driver.username|default:"—" }}</td>
         <td class="num">{{ v.days_logged }}</td>
         <td class="num">{{ v.trips }}</td>
         <td class="num">{{ v.collections|floatformat:2 }}</td>
@@ -26,11 +29,11 @@
         <td class="num"><strong>{{ v.net|floatformat:2 }}</strong></td>
     </tr>
     {% empty %}
-    <tr><td colspan="6">No vehicles yet.</td></tr>
+    <tr><td colspan="{% if is_sacco_admin %}8{% else %}7{% endif %}">No vehicles yet.</td></tr>
     {% endfor %}
     {% if vehicles %}
-    <tr>
-        <th>Total</th><th></th><th></th>
+    <tr class="total-row">
+        <th>Total</th>{% if is_sacco_admin %}<th></th>{% endif %}<th></th><th></th><th></th>
         <th class="num">{{ totals.collections|floatformat:2 }}</th>
         <th class="num">{{ totals.expenses|floatformat:2 }}</th>
         <th class="num">{{ totals.net|floatformat:2 }}</th>

@@ -53,6 +53,7 @@ def vehicle_to_dict(vehicle: Vehicle) -> dict:
         "route": vehicle.route,
         "capacity": vehicle.capacity,
         "status": vehicle.status,
+        "owner": vehicle.owner.username,
         "driver": vehicle.driver.username if vehicle.driver_id else None,
     }
 
@@ -82,14 +83,14 @@ def csrf(request):
 @require_GET
 @api_login_required
 def vehicle_list(request):
-    vehicles = [vehicle_to_dict(v) for v in vehicles_for(request.user).select_related("driver")]
+    vehicles = [vehicle_to_dict(v) for v in vehicles_for(request.user).select_related("owner", "driver")]
     return JsonResponse({"vehicles": vehicles})
 
 
 @require_GET
 @api_login_required
 def vehicle_detail(request, pk: int):
-    vehicle = get_object_or_404(vehicles_for(request.user).select_related("driver"), pk=pk)
+    vehicle = get_object_or_404(vehicles_for(request.user).select_related("owner", "driver"), pk=pk)
     return JsonResponse(vehicle_to_dict(vehicle))
 
 

@@ -173,3 +173,12 @@ class ApiRoleTests(ApiTestCase):
 
         denied = self.post_json(self.return_data())
         self.assertEqual(denied.status_code, 403)
+
+    def test_api_vehicle_payload_includes_owner_and_driver(self):
+        self.client.force_login(self.admin)
+        vehicles = self.client.get(reverse("fleet:api_vehicle_list")).json()["vehicles"]
+        by_plate = {v["plate"]: v for v in vehicles}
+        self.assertEqual(by_plate["KDA 123A"]["owner"], "wanjiku")
+        self.assertEqual(by_plate["KDA 123A"]["driver"], "mwangi")
+        self.assertEqual(by_plate["KCB 999B"]["owner"], "otieno")
+        self.assertIsNone(by_plate["KCB 999B"]["driver"])

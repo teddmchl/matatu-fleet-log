@@ -17,7 +17,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
 
-from accounts.roles import is_driver, vehicles_for
+from accounts.roles import can_view_reports, vehicles_for
 
 PERIODS = {"7": 7, "30": 30, "all": None}
 ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
@@ -25,7 +25,7 @@ ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
 
 @login_required
 def summary(request):
-    if is_driver(request.user):
+    if not can_view_reports(request.user):
         return HttpResponseForbidden("Fleet reports are only available to vehicle owners and SACCO admins.")
 
     period = request.GET.get("period", "30")
@@ -40,6 +40,7 @@ def summary(request):
 
     vehicles = (
         vehicles_for(request.user)
+        .select_related("owner", "driver")
         .annotate(
             days_logged=Count("returns", filter=in_period),
             trips=Coalesce(Sum("returns__trips", filter=in_period), 0),

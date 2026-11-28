@@ -38,6 +38,7 @@ class VehicleForm(forms.ModelForm):
             profile__role=Profile.ROLE_DRIVER
         ).order_by("username")
         self.fields["driver"].required = False
+        self.fields["driver"].empty_label = "Unassigned"
 
     def clean_plate(self) -> str:
         plate = self.cleaned_data["plate"].upper().replace(" ", "")

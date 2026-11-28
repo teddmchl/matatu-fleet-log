@@ -4,7 +4,9 @@ import datetime
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -337,3 +339,69 @@ class RoleAuthorisationTests(FleetTestCase):
         self.assertEqual(self.client.post(reverse("fleet:return_new"), self.return_data()).status_code, 403)
         self.assertEqual(self.client.get(reverse("fleet:return_edit", args=[ret.pk])).status_code, 403)
         self.assertEqual(self.client.post(reverse("fleet:return_delete", args=[ret.pk])).status_code, 403)
+
+    def test_owner_can_assign_and_clear_driver_on_vehicle_edit(self):
+        unassigned = Vehicle.objects.create(owner=self.owner, plate="KDH 222H", route="46")
+        self.client.force_login(self.owner)
+
+        # Assigning a non-driver is rejected.
+        bad = self.client.post(reverse("fleet:vehicle_edit", args=[unassigned.pk]), {
+            "plate": "KDH 222H", "route": "46", "capacity": 14, "status": "active", "driver": self.other.pk,
+        })
+        self.assertEqual(bad.status_code, 200)
+        self.assertIn("driver", bad.context["form"].errors)
+
+        # Assigning a driver succeeds.
+        ok = self.client.post(reverse("fleet:vehicle_edit", args=[unassigned.pk]), {
+            "plate": "KDH 222H", "route": "46", "capacity": 14, "status": "active", "driver": self.driver.pk,
+        })
+        self.assertRedirects(ok, reverse("fleet:vehicle_list"))
+        unassigned.refresh_from_db()
+        self.assertEqual(unassigned.driver, self.driver)
+
+        # Clearing the driver leaves the vehicle unassigned.
+        cleared = self.client.post(reverse("fleet:vehicle_edit", args=[unassigned.pk]), {
+            "plate": "KDH 222H", "route": "46", "capacity": 14, "status": "active", "driver": "",
+        })
+        self.assertRedirects(cleared, reverse("fleet:vehicle_list"))
+        unassigned.refresh_from_db()
+        self.assertIsNone(unassigned.driver)
+
+    def test_driver_gets_404_editing_or_deleting_unassigned_vehicles_return(self):
+        other_ret = DailyReturn.objects.create(
+            vehicle=self.other_vehicle, recorded_by=self.other, date=timezone.localdate(),
+            collections=Decimal("7000"), trips=6,
+        )
+        self.client.force_login(self.driver)
+        self.assertEqual(self.client.get(reverse("fleet:return_edit", args=[other_ret.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("fleet:return_delete", args=[other_ret.pk])).status_code, 404)
+        self.assertTrue(DailyReturn.objects.filter(pk=other_ret.pk).exists())
+
+    def test_driver_cannot_log_return_for_inactive_assigned_vehicle(self):
+        self.vehicle.status = "garage"
+        self.vehicle.save()
+        self.client.force_login(self.driver)
+        response = self.client.post(reverse("fleet:return_new"), self.return_data())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("vehicle", response.context["form"].errors)
+
+    def test_return_list_avoids_per_row_profile_queries(self):
+        today = timezone.localdate()
+        DailyReturn.objects.create(
+            vehicle=self.vehicle, recorded_by=self.driver, date=today,
+            collections=Decimal("9000"), trips=8,
+        )
+        self.client.force_login(self.driver)
+        with CaptureQueriesContext(connection) as one_row_queries:
+            self.client.get(reverse("fleet:return_list"))
+
+        for days_ago in range(1, 5):
+            DailyReturn.objects.create(
+                vehicle=self.vehicle, recorded_by=self.driver,
+                date=today - datetime.timedelta(days=days_ago),
+                collections=Decimal("8000"), trips=6,
+            )
+        with CaptureQueriesContext(connection) as five_row_queries:
+            self.client.get(reverse("fleet:return_list"))
+
+        self.assertEqual(len(five_row_queries), len(one_row_queries))

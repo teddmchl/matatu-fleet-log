@@ -1,5 +1,6 @@
 """Accounts app tests: sign-up, login/logout, roles and the profile page."""
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -74,3 +75,12 @@ class AccountsTests(TestCase):
         response = self.client.get(reverse("accounts:profile"))
         self.assertContains(response, "SACCO admin")
         self.assertContains(response, "Hi, wanjiku (SACCO admin)")
+
+    def test_signup_form_does_not_offer_sacco_admin_option(self):
+        response = self.client.get(reverse("accounts:signup"))
+        self.assertContains(response, 'value="owner"')
+        self.assertContains(response, 'value="driver"')
+        self.assertNotContains(response, 'value="sacco_admin"')
+
+    def test_profile_is_registered_in_admin(self):
+        self.assertIn(Profile, admin.site._registry)

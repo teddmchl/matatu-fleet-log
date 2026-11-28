@@ -23,8 +23,12 @@ from .models import Profile
 
 def get_profile(user) -> Profile:
     """Return the user's Profile, creating a default owner profile if missing."""
-    profile, _ = Profile.objects.get_or_create(user=user)
-    return profile
+    try:
+        return user.profile
+    except Profile.DoesNotExist:
+        profile, _ = Profile.objects.get_or_create(user=user)
+        user.profile = profile
+        return profile
 
 
 def role_of(user) -> str:
@@ -48,29 +52,31 @@ def is_sacco_admin(user) -> bool:
 
 def vehicles_for(user):
     """Vehicles this user is allowed to view."""
-    if not getattr(user, "is_authenticated", False):
+    role = role_of(user)
+    if not role:
         return Vehicle.objects.none()
-    if is_sacco_admin(user):
+    if role == Profile.ROLE_SACCO_ADMIN:
         return Vehicle.objects.all()
-    if is_driver(user):
+    if role == Profile.ROLE_DRIVER:
         return Vehicle.objects.filter(driver=user)
     return Vehicle.objects.filter(owner=user)
 
 
 def loggable_vehicles_for(user):
     """Active vehicles this user may pick when logging a daily return."""
-    if not getattr(user, "is_authenticated", False) or is_sacco_admin(user):
+    if not can_add_return(user):
         return Vehicle.objects.none()
     return vehicles_for(user).filter(status="active")
 
 
 def returns_for(user):
     """Daily returns this user is allowed to view."""
-    if not getattr(user, "is_authenticated", False):
+    role = role_of(user)
+    if not role:
         return DailyReturn.objects.none()
-    if is_sacco_admin(user):
+    if role == Profile.ROLE_SACCO_ADMIN:
         return DailyReturn.objects.all()
-    if is_driver(user):
+    if role == Profile.ROLE_DRIVER:
         return DailyReturn.objects.filter(vehicle__driver=user)
     return DailyReturn.objects.filter(vehicle__owner=user)
 
@@ -82,7 +88,12 @@ def can_manage_vehicles(user) -> bool:
 
 def can_add_return(user) -> bool:
     """Owners and drivers log returns; SACCO admins have read-only access."""
-    return is_owner(user) or is_driver(user)
+    return role_of(user) in (Profile.ROLE_OWNER, Profile.ROLE_DRIVER)
+
+
+def can_view_reports(user) -> bool:
+    """Owners see their own fleet report; SACCO admins see the whole fleet."""
+    return role_of(user) in (Profile.ROLE_OWNER, Profile.ROLE_SACCO_ADMIN)
 
 
 def can_modify_return(user, daily_return: DailyReturn) -> bool:
@@ -92,9 +103,10 @@ def can_modify_return(user, daily_return: DailyReturn) -> bool:
     for a vehicle currently assigned to them.
     SACCO admins cannot modify returns.
     """
-    if is_owner(user):
+    role = role_of(user)
+    if role == Profile.ROLE_OWNER:
         return daily_return.vehicle.owner_id == user.id
-    if is_driver(user):
+    if role == Profile.ROLE_DRIVER:
         return (
             daily_return.vehicle.driver_id == user.id
             and daily_return.recorded_by_id == user.id

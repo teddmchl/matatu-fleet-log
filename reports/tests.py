@@ -69,3 +69,23 @@ class ReportTests(TestCase):
         rows = list(response.context["vehicles"])
         self.assertEqual([r.plate for r in rows], ["KDA 123A", "KCB 999B"])
         self.assertEqual(response.context["totals"]["net"], Decimal("15500"))
+
+    def test_report_displays_driver_and_owner_columns_by_role(self):
+        driver = User.objects.create_user("mwangi", password="strong-pass-123")
+        driver.profile.role = Profile.ROLE_DRIVER
+        driver.profile.save()
+        self.vehicle.driver = driver
+        self.vehicle.save()
+
+        owner_resp = self.client.get(reverse("reports:summary"))
+        self.assertContains(owner_resp, "mwangi")
+        self.assertNotContains(owner_resp, "<th>Owner</th>")
+
+        admin = User.objects.create_user("sacco_boss", password="strong-pass-123")
+        admin.profile.role = Profile.ROLE_SACCO_ADMIN
+        admin.profile.save()
+        self.client.force_login(admin)
+        admin_resp = self.client.get(reverse("reports:summary"))
+        self.assertContains(admin_resp, "<th>Owner</th>")
+        self.assertContains(admin_resp, "wanjiku")
+        self.assertContains(admin_resp, "mwangi")
