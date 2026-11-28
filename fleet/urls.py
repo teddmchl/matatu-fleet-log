@@ -2,11 +2,12 @@
 # APP URLCONF (fleet/urls.py)
 # ==============================================================================
 # app_name = "fleet" namespaces the routes: {% url 'fleet:vehicle_list' %}.
+# The api/ routes return JSON instead of HTML pages.
 # ==============================================================================
 
 from django.urls import path
 
-from . import views
+from . import api, views
 
 app_name = "fleet"
 
@@ -20,4 +21,9 @@ urlpatterns = [
     path("returns/new/", views.return_new, name="return_new"),
     path("returns/<int:pk>/edit/", views.return_edit, name="return_edit"),
     path("returns/<int:pk>/delete/", views.return_delete, name="return_delete"),
+    # JSON API (fleet/api.py)
+    path("api/csrf/", api.csrf, name="api_csrf"),
+    path("api/vehicles/", api.vehicle_list, name="api_vehicle_list"),
+    path("api/vehicles/<int:pk>/", api.vehicle_detail, name="api_vehicle_detail"),
+    path("api/returns/", api.return_list, name="api_return_list"),
 ]
