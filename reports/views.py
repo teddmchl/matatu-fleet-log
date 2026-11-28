@@ -1,9 +1,11 @@
 # ==============================================================================
 # APP VIEWS (reports/views.py)
 # ==============================================================================
-# summary() totals each of the user's vehicles over a period, using the ORM's
-# aggregation (annotate + Sum) instead of looping in Python. Only the logged-in
-# user's vehicles are included.
+# summary() totals vehicles over a period using the ORM's aggregation
+# (annotate + Sum) instead of looping in Python.
+#   - owners see totals for their own fleet
+#   - SACCO admins see totals across the whole fleet
+#   - drivers receive 403 (HttpResponseForbidden)
 # ==============================================================================
 
 import datetime
@@ -11,8 +13,11 @@ import datetime
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
+
+from accounts.roles import is_driver, vehicles_for
 
 PERIODS = {"7": 7, "30": 30, "all": None}
 ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
@@ -20,6 +25,9 @@ ZERO = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
 
 @login_required
 def summary(request):
+    if is_driver(request.user):
+        return HttpResponseForbidden("Fleet reports are only available to vehicle owners and SACCO admins.")
+
     period = request.GET.get("period", "30")
     if period not in PERIODS:
         period = "30"
@@ -31,7 +39,8 @@ def summary(request):
         in_period = Q(returns__date__gte=since)
 
     vehicles = (
-        request.user.vehicles.annotate(
+        vehicles_for(request.user)
+        .annotate(
             days_logged=Count("returns", filter=in_period),
             trips=Coalesce(Sum("returns__trips", filter=in_period), 0),
             collections=Coalesce(Sum("returns__collections", filter=in_period), ZERO),

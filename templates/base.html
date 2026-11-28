@@ -1,7 +1,8 @@
 {% load static %}
 {% comment %}
 Project-level layout. Every page extends this and fills {% block content %}.
-The nav changes depending on request.user (available through the auth context processor).
+The nav changes depending on request.user (available through the auth context processor)
+and the user's role (from accounts.roles.role_context).
 Styles live in static/css/style.css and are served through the staticfiles app.
 {% endcomment %}
 <!DOCTYPE html>
@@ -20,8 +21,8 @@ Styles live in static/css/style.css and are served through the staticfiles app.
                 {% if user.is_authenticated %}
                     <a href="{% url 'fleet:vehicle_list' %}">Vehicles</a>
                     <a href="{% url 'fleet:return_list' %}">Daily returns</a>
-                    <a href="{% url 'reports:summary' %}">Reports</a>
-                    <a href="{% url 'accounts:profile' %}">Hi, {{ user.username }}</a>
+                    {% if not is_driver %}<a href="{% url 'reports:summary' %}">Reports</a>{% endif %}
+                    <a href="{% url 'accounts:profile' %}">Hi, {{ user.username }} ({{ user_role_label }})</a>
                     {# Logout must be a POST in Django 5+, so it carries a CSRF token #}
                     <form method="post" action="{% url 'logout' %}">
                         {% csrf_token %}

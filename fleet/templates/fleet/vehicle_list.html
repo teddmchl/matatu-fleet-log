@@ -3,21 +3,25 @@
 {% block title %}Vehicles | Matatu Fleet Log{% endblock %}
 
 {% block content %}
-<h2>My vehicles</h2>
-<p><a href="{% url 'fleet:vehicle_new' %}">+ Add a vehicle</a></p>
+<h2>{% if is_sacco_admin %}All SACCO vehicles{% elif is_driver %}Assigned vehicles{% else %}My vehicles{% endif %}</h2>
+{% if is_owner %}<p><a href="{% url 'fleet:vehicle_new' %}">+ Add a vehicle</a></p>{% endif %}
 <div class="table-wrap">
 <table>
-    <tr><th>Plate</th><th>Route</th><th class="num">Capacity</th><th>Status</th><th></th></tr>
+    <tr>
+        <th>Plate</th><th>Route</th><th class="num">Capacity</th><th>Status</th><th>Driver</th>{% if is_sacco_admin %}<th>Owner</th>{% endif %}{% if is_owner %}<th></th>{% endif %}
+    </tr>
     {% for vehicle in vehicles %}
     <tr>
         <td>{{ vehicle.plate }}</td>
         <td>{{ vehicle.route }}</td>
         <td class="num">{{ vehicle.capacity }}</td>
         <td>{{ vehicle.get_status_display }}</td>
-        <td><a href="{% url 'fleet:vehicle_edit' vehicle.pk %}">Edit</a> · <a href="{% url 'fleet:vehicle_delete' vehicle.pk %}">Delete</a></td>
+        <td>{{ vehicle.driver.username|default:"—" }}</td>
+        {% if is_sacco_admin %}<td>{{ vehicle.owner.username }}</td>{% endif %}
+        {% if is_owner %}<td><a href="{% url 'fleet:vehicle_edit' vehicle.pk %}">Edit</a> · <a href="{% url 'fleet:vehicle_delete' vehicle.pk %}">Delete</a></td>{% endif %}
     </tr>
     {% empty %}
-    <tr><td colspan="5">No vehicles yet.</td></tr>
+    <tr><td colspan="6">No vehicles yet.</td></tr>
     {% endfor %}
 </table>
 </div>

@@ -1,8 +1,10 @@
-"""Accounts app tests: sign-up, login/logout and the profile page."""
+"""Accounts app tests: sign-up, login/logout, roles and the profile page."""
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+
+from .models import Profile
 
 
 class AccountsTests(TestCase):
@@ -41,3 +43,34 @@ class AccountsTests(TestCase):
         response = self.client.get(reverse("accounts:profile"))
         self.assertContains(response, "wanjiku")
         self.assertTrue(response.context["expires_at_browser_close"])
+
+    def test_profile_created_automatically_with_owner_role(self):
+        self.assertEqual(self.user.profile.role, Profile.ROLE_OWNER)
+
+    def test_signup_can_pick_driver_role(self):
+        response = self.client.post(reverse("accounts:signup"), {
+            "username": "mwangi", "email": "mwangi@example.com",
+            "role": Profile.ROLE_DRIVER,
+            "password1": "matatu-rocks-2026", "password2": "matatu-rocks-2026",
+        })
+        self.assertRedirects(response, reverse("fleet:home"))
+        driver = User.objects.get(username="mwangi")
+        self.assertEqual(driver.profile.role, Profile.ROLE_DRIVER)
+
+    def test_signup_cannot_pick_sacco_admin(self):
+        response = self.client.post(reverse("accounts:signup"), {
+            "username": "rogue", "email": "rogue@example.com",
+            "role": Profile.ROLE_SACCO_ADMIN,
+            "password1": "matatu-rocks-2026", "password2": "matatu-rocks-2026",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("role", response.context["form"].errors)
+        self.assertFalse(User.objects.filter(username="rogue").exists())
+
+    def test_profile_and_nav_show_role(self):
+        self.user.profile.role = Profile.ROLE_SACCO_ADMIN
+        self.user.profile.save()
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounts:profile"))
+        self.assertContains(response, "SACCO admin")
+        self.assertContains(response, "Hi, wanjiku (SACCO admin)")

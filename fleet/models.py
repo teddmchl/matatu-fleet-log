@@ -1,11 +1,14 @@
 # ==============================================================================
 # APP MODELS (fleet/models.py)
 # ==============================================================================
-# Two tables plus Django's built-in User:
+# Two tables in the fleet app, linked to Django's built-in User (and accounts.Profile):
 #
-#   User (django.contrib.auth) 1 ──< Vehicle 1 ──< DailyReturn >── 1 User (driver)
+#   User (owner) 1 ──< Vehicle 1 ──< DailyReturn >── 1 User (recorded_by)
+#                         │
+#                         └──> 0..1 User (driver)
 #
-#   - Vehicle.owner      ForeignKey -> User   (an owner can have many matatus)
+#   - Vehicle.owner       ForeignKey -> User   (an owner can have many matatus)
+#   - Vehicle.driver      ForeignKey -> User   (optional driver assigned by the owner)
 #   - DailyReturn.vehicle ForeignKey -> Vehicle (a matatu has one return per day)
 #   - DailyReturn.recorded_by ForeignKey -> User (who logged it)
 # ==============================================================================
@@ -18,7 +21,7 @@ from django.urls import reverse
 
 
 class Vehicle(models.Model):
-    """A matatu registered by an owner."""
+    """A matatu registered by an owner, optionally assigned to a driver."""
 
     STATUS_CHOICES = [
         ("active", "Active"),
@@ -30,6 +33,14 @@ class Vehicle(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,  # delete the owner -> their vehicles go too
         related_name="vehicles",
+    )
+    driver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,  # delete the driver -> vehicle stays, becomes unassigned
+        null=True,
+        blank=True,
+        related_name="assigned_vehicles",
+        limit_choices_to={"profile__role": "driver"},
     )
     plate = models.CharField("number plate", max_length=10, unique=True)
     route = models.CharField(max_length=60, help_text="e.g. 46 Kawangware - Town")

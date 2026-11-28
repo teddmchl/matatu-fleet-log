@@ -5,9 +5,14 @@
 #   - sign-up, login and logout live in the accounts app
 #   - @login_required sends anonymous users to settings.LOGIN_URL
 #
-# Authorisation:
-#   - every query is filtered by request.user, so you only ever see your own
-#     vehicles and returns; anyone else's id returns 404 (get_object_or_404)
+# Authorisation (Week 8 — roles in accounts/roles.py):
+#   - every query goes through vehicles_for(request.user) / returns_for(request.user)
+#   - owners see and manage their own vehicles and returns
+#   - drivers see their assigned vehicles, log returns for them, and can edit or
+#     delete only returns they recorded themselves on the same day
+#   - SACCO admins see all vehicles and returns across the fleet (read-only)
+#   - actions a role is not allowed to perform return 403 (HttpResponseForbidden);
+#     records outside a user's queryset return 404 (get_object_or_404)
 #
 # Deleting:
 #   - the delete views show a confirm page on GET and only delete on POST, so a
@@ -21,21 +26,31 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
+from accounts.roles import (
+    can_add_return,
+    can_manage_vehicles,
+    can_modify_return,
+    returns_for,
+    vehicles_for,
+)
+
 from .forms import DailyReturnForm, VehicleForm
-from .models import DailyReturn, Vehicle
+from .models import Vehicle
 
 LAST_VEHICLE_KEY = "last_vehicle_id"
 
 
 def home(request):
-    """Public landing page; shows a summary once you are logged in."""
+    """Public landing page; shows role-scoped totals once you are logged in."""
     context = {}
     if request.user.is_authenticated:
-        returns = DailyReturn.objects.filter(vehicle__owner=request.user)
+        vehicles = vehicles_for(request.user)
+        returns = returns_for(request.user)
         context = {
-            "vehicle_count": request.user.vehicles.count(),
+            "vehicle_count": vehicles.count(),
             "return_count": returns.count(),
             "total_collections": returns.aggregate(total=Sum("collections"))["total"] or 0,
         }
@@ -44,12 +59,14 @@ def home(request):
 
 @login_required
 def vehicle_list(request):
-    vehicles = request.user.vehicles.all()
+    vehicles = vehicles_for(request.user).select_related("owner", "driver")
     return render(request, "fleet/vehicle_list.html", {"vehicles": vehicles})
 
 
 @login_required
 def vehicle_new(request):
+    if not can_manage_vehicles(request.user):
+        return HttpResponseForbidden("Only matatu owners can add vehicles.")
     if request.method == "POST":
         form = VehicleForm(request.POST)
         if form.is_valid():
@@ -65,6 +82,8 @@ def vehicle_new(request):
 
 @login_required
 def vehicle_edit(request, pk: int):
+    if not can_manage_vehicles(request.user):
+        return HttpResponseForbidden("Only matatu owners can edit vehicles.")
     vehicle = get_object_or_404(Vehicle, pk=pk, owner=request.user)
     form = VehicleForm(request.POST or None, instance=vehicle)
     if request.method == "POST" and form.is_valid():
@@ -76,6 +95,8 @@ def vehicle_edit(request, pk: int):
 
 @login_required
 def vehicle_delete(request, pk: int):
+    if not can_manage_vehicles(request.user):
+        return HttpResponseForbidden("Only matatu owners can delete vehicles.")
     vehicle = get_object_or_404(Vehicle, pk=pk, owner=request.user)
     if request.method == "POST":
         plate = vehicle.plate
@@ -92,12 +113,19 @@ def vehicle_delete(request, pk: int):
 
 @login_required
 def return_list(request):
-    returns = DailyReturn.objects.filter(vehicle__owner=request.user).select_related("vehicle")
-    return render(request, "fleet/return_list.html", {"returns": returns})
+    returns = returns_for(request.user).select_related("vehicle", "recorded_by")
+    editable_ids = {r.pk for r in returns if can_modify_return(request.user, r)}
+    return render(
+        request,
+        "fleet/return_list.html",
+        {"returns": returns, "editable_ids": editable_ids},
+    )
 
 
 @login_required
 def return_new(request):
+    if not can_add_return(request.user):
+        return HttpResponseForbidden("SACCO admins have read-only access.")
     if request.method == "POST":
         form = DailyReturnForm(request.POST, user=request.user)
         if form.is_valid():
@@ -115,7 +143,11 @@ def return_new(request):
 
 @login_required
 def return_edit(request, pk: int):
-    daily_return = get_object_or_404(DailyReturn, pk=pk, vehicle__owner=request.user)
+    if not can_add_return(request.user):
+        return HttpResponseForbidden("SACCO admins have read-only access.")
+    daily_return = get_object_or_404(returns_for(request.user).select_related("vehicle"), pk=pk)
+    if not can_modify_return(request.user, daily_return):
+        return HttpResponseForbidden("Drivers can only edit returns they recorded today.")
     form = DailyReturnForm(request.POST or None, instance=daily_return, user=request.user)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -126,7 +158,11 @@ def return_edit(request, pk: int):
 
 @login_required
 def return_delete(request, pk: int):
-    daily_return = get_object_or_404(DailyReturn, pk=pk, vehicle__owner=request.user)
+    if not can_add_return(request.user):
+        return HttpResponseForbidden("SACCO admins have read-only access.")
+    daily_return = get_object_or_404(returns_for(request.user).select_related("vehicle"), pk=pk)
+    if not can_modify_return(request.user, daily_return):
+        return HttpResponseForbidden("Drivers can only delete returns they recorded today.")
     if request.method == "POST":
         label = str(daily_return)
         daily_return.delete()

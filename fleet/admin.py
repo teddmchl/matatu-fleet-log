@@ -12,8 +12,8 @@ from .models import DailyReturn, Vehicle
 
 @admin.register(Vehicle)
 class VehicleAdmin(admin.ModelAdmin):
-    list_display = ("plate", "route", "capacity", "status", "owner")
-    search_fields = ("plate", "route", "owner__username")
+    list_display = ("plate", "route", "capacity", "status", "owner", "driver")
+    search_fields = ("plate", "route", "owner__username", "driver__username")
     list_filter = ("status",)
 
 

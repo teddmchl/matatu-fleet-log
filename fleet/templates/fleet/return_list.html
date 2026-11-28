@@ -4,12 +4,12 @@
 
 {% block content %}
 <h2>Daily returns</h2>
-<p><a href="{% url 'fleet:return_new' %}">+ Log a return</a></p>
+{% if is_owner or is_driver %}<p><a href="{% url 'fleet:return_new' %}">+ Log a return</a></p>{% endif %}
 <div class="table-wrap">
 <table>
     <tr>
         <th>Date</th><th>Vehicle</th><th class="num">Trips</th>
-        <th class="num">Collections</th><th class="num">Fuel</th><th class="num">Other</th><th class="num">Net</th><th></th>
+        <th class="num">Collections</th><th class="num">Fuel</th><th class="num">Other</th><th class="num">Net</th><th>Recorded by</th><th></th>
     </tr>
     {% for r in returns %}
     <tr>
@@ -20,10 +20,11 @@
         <td class="num">{{ r.fuel|floatformat:2 }}</td>
         <td class="num">{{ r.other_expenses|floatformat:2 }}</td>
         <td class="num"><strong>{{ r.net|floatformat:2 }}</strong></td>
-        <td><a href="{% url 'fleet:return_edit' r.pk %}">Edit</a> · <a href="{% url 'fleet:return_delete' r.pk %}">Delete</a></td>
+        <td>{{ r.recorded_by.username }}</td>
+        <td>{% if r.pk in editable_ids %}<a href="{% url 'fleet:return_edit' r.pk %}">Edit</a> · <a href="{% url 'fleet:return_delete' r.pk %}">Delete</a>{% endif %}</td>
     </tr>
     {% empty %}
-    <tr><td colspan="8">No returns logged yet.</td></tr>
+    <tr><td colspan="9">No returns logged yet.</td></tr>
     {% endfor %}
 </table>
 </div>

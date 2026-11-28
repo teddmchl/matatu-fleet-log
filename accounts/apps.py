@@ -2,8 +2,8 @@
 # APP CONFIGURATION (accounts/apps.py)
 # ==============================================================================
 # The accounts app owns everything about who the user is: sign-up, the
-# login/logout templates and the profile page that shows the current session.
-# It has no models of its own; it uses Django's built-in User.
+# login/logout templates, the Profile model (user roles) and the profile page
+# that shows the current session.
 # ==============================================================================
 
 from django.apps import AppConfig

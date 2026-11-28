@@ -10,10 +10,12 @@
         <li>Daily returns logged: <strong>{{ return_count }}</strong></li>
         <li>Total collections: <strong>KES {{ total_collections|floatformat:2 }}</strong></li>
     </ul>
+    {% if is_owner or is_driver %}
     <p>
         <a class="button" href="{% url 'fleet:return_new' %}">Log today's return</a>
-        <a href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>
+        {% if is_owner %}<a href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>{% endif %}
     </p>
+    {% endif %}
 {% else %}
     <h2>Welcome</h2>
     <p>Track what every matatu earned and spent each day.</p>

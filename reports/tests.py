@@ -1,4 +1,4 @@
-"""Reports app tests: per-vehicle totals and access control."""
+"""Reports app tests: per-vehicle totals and role-based access control."""
 
 import datetime
 from decimal import Decimal
@@ -8,15 +8,16 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import Profile
 from fleet.models import DailyReturn, Vehicle
 
 
 class ReportTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user("wanjiku", password="strong-pass-123")
-        other = User.objects.create_user("otieno", password="strong-pass-123")
+        self.other = User.objects.create_user("otieno", password="strong-pass-123")
         self.vehicle = Vehicle.objects.create(owner=self.owner, plate="KDA 123A", route="46")
-        Vehicle.objects.create(owner=other, plate="KCB 999B", route="111")
+        self.other_vehicle = Vehicle.objects.create(owner=self.other, plate="KCB 999B", route="111")
         today = timezone.localdate()
         for days_ago, collections in ((0, "9000"), (1, "8000"), (40, "5000")):
             DailyReturn.objects.create(
@@ -44,3 +45,27 @@ class ReportTests(TestCase):
         self.assertEqual([r.plate for r in rows], ["KDA 123A"])
         self.assertEqual(rows[0].days_logged, 3)
         self.assertEqual(response.context["totals"]["net"], Decimal("11500"))
+
+    def test_driver_cannot_view_fleet_reports(self):
+        driver = User.objects.create_user("mwangi", password="strong-pass-123")
+        driver.profile.role = Profile.ROLE_DRIVER
+        driver.profile.save()
+        self.client.force_login(driver)
+        response = self.client.get(reverse("reports:summary"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_sacco_admin_sees_whole_fleet_totals(self):
+        DailyReturn.objects.create(
+            vehicle=self.other_vehicle, recorded_by=self.other,
+            date=timezone.localdate(), trips=6,
+            collections=Decimal("6000"), fuel=Decimal("2000"), other_expenses=Decimal("0"),
+        )
+        admin = User.objects.create_user("sacco_boss", password="strong-pass-123")
+        admin.profile.role = Profile.ROLE_SACCO_ADMIN
+        admin.profile.save()
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse("reports:summary"), {"period": "all"})
+        rows = list(response.context["vehicles"])
+        self.assertEqual([r.plate for r in rows], ["KDA 123A", "KCB 999B"])
+        self.assertEqual(response.context["totals"]["net"], Decimal("15500"))

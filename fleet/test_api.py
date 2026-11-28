@@ -4,9 +4,12 @@ import datetime
 import json
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+
+from accounts.models import Profile
 
 from .models import DailyReturn
 from .tests import FleetTestCase
@@ -119,3 +122,54 @@ class ApiCreateTests(ApiTestCase):
         token = client.get(reverse("fleet:api_csrf")).json()["csrfToken"]
         response = self.post_json(self.return_data(), client=client, HTTP_X_CSRFTOKEN=token)
         self.assertEqual(response.status_code, 201)
+
+
+class ApiRoleTests(ApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.driver = User.objects.create_user("mwangi", password="strong-pass-123")
+        self.driver.profile.role = Profile.ROLE_DRIVER
+        self.driver.profile.save()
+
+        self.admin = User.objects.create_user("sacco_boss", password="strong-pass-123")
+        self.admin.profile.role = Profile.ROLE_SACCO_ADMIN
+        self.admin.profile.save()
+
+        self.vehicle.driver = self.driver
+        self.vehicle.save()
+
+    def test_driver_api_sees_only_assigned_vehicles_and_returns(self):
+        self.client.force_login(self.driver)
+        vehicles = self.client.get(reverse("fleet:api_vehicle_list")).json()["vehicles"]
+        self.assertEqual([v["plate"] for v in vehicles], ["KDA 123A"])
+        self.assertEqual(self.client.get(reverse("fleet:api_vehicle_detail", args=[self.vehicle.pk])).status_code, 200)
+        self.assertEqual(
+            self.client.get(reverse("fleet:api_vehicle_detail", args=[self.other_vehicle.pk])).status_code,
+            404,
+        )
+        returns = self.client.get(reverse("fleet:api_return_list")).json()["returns"]
+        self.assertEqual([r["plate"] for r in returns], ["KDA 123A"])
+
+    def test_driver_api_can_post_return_only_for_assigned_vehicle(self):
+        self.client.force_login(self.driver)
+        ok = self.post_json(self.return_data())
+        self.assertEqual(ok.status_code, 201)
+        self.assertEqual(ok.json()["recorded_by"], "mwangi")
+
+        bad = self.post_json(self.return_data(vehicle=self.other_vehicle.pk))
+        self.assertEqual(bad.status_code, 400)
+        self.assertIn("vehicle", bad.json()["errors"])
+
+    def test_sacco_admin_api_sees_all_but_cannot_post(self):
+        self.client.force_login(self.admin)
+        vehicles = self.client.get(reverse("fleet:api_vehicle_list")).json()["vehicles"]
+        self.assertEqual([v["plate"] for v in vehicles], ["KCB 999B", "KDA 123A"])
+        self.assertEqual(
+            self.client.get(reverse("fleet:api_vehicle_detail", args=[self.other_vehicle.pk])).status_code,
+            200,
+        )
+        returns = self.client.get(reverse("fleet:api_return_list")).json()["returns"]
+        self.assertEqual(len(returns), 2)
+
+        denied = self.post_json(self.return_data())
+        self.assertEqual(denied.status_code, 403)

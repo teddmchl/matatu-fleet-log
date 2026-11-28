@@ -1,9 +1,11 @@
 # ==============================================================================
 # FORMS (fleet/forms.py)
 # ==============================================================================
-#   VehicleForm     - ModelForm; clean_plate() normalises the plate
-#   DailyReturnForm - ModelForm; only offers the user's own vehicles,
-#                     clean_date() blocks future dates, clean() checks totals
+#   VehicleForm     - ModelForm; clean_plate() normalises the plate and limits
+#                     the optional driver dropdown to users with the driver role
+#   DailyReturnForm - ModelForm; offers only the active vehicles the user is
+#                     allowed to log against (own vehicles for owners, assigned
+#                     vehicles for drivers), blocks future dates, checks totals
 # ==============================================================================
 
 import re
@@ -11,6 +13,9 @@ import re
 from django import forms
 from django.contrib.auth.models import User
 from django.utils import timezone
+
+from accounts.models import Profile
+from accounts.roles import loggable_vehicles_for
 
 from .models import DailyReturn, Vehicle
 
@@ -21,11 +26,18 @@ PLATE_PATTERN = re.compile(r"^K[A-Z]{2}\d{3}[A-Z]?$")
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = Vehicle
-        fields = ["plate", "route", "capacity", "status"]
+        fields = ["plate", "route", "capacity", "status", "driver"]
         widgets = {
             "plate": forms.TextInput(attrs={"placeholder": "KDA 123A"}),
             "route": forms.TextInput(attrs={"placeholder": "46 Kawangware - Town"}),
         }
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["driver"].queryset = User.objects.filter(
+            profile__role=Profile.ROLE_DRIVER
+        ).order_by("username")
+        self.fields["driver"].required = False
 
     def clean_plate(self) -> str:
         plate = self.cleaned_data["plate"].upper().replace(" ", "")
@@ -48,8 +60,8 @@ class DailyReturnForm(forms.ModelForm):
 
     def __init__(self, *args, user: User, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        # A user can only log returns against vehicles they own.
-        self.fields["vehicle"].queryset = Vehicle.objects.filter(owner=user, status="active")
+        # Owners can pick their own active vehicles; drivers can pick active vehicles assigned to them.
+        self.fields["vehicle"].queryset = loggable_vehicles_for(user)
 
     def clean_date(self):
         date = self.cleaned_data["date"]

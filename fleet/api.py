@@ -4,17 +4,19 @@
 # Small read/write API on top of the same models, built with JsonResponse:
 #
 #   GET  /api/csrf/            -> {"csrfToken": "..."} (also sets the csrftoken cookie)
-#   GET  /api/vehicles/        -> your vehicles
-#   GET  /api/vehicles/<id>/   -> one of your vehicles (404 if it isn't yours)
-#   GET  /api/returns/         -> your daily returns, optional ?vehicle=<id>&date=YYYY-MM-DD
-#   POST /api/returns/         -> create a daily return from a JSON body
+#   GET  /api/vehicles/        -> vehicles visible to your role (own / assigned / all)
+#   GET  /api/vehicles/<id>/   -> one visible vehicle (404 if outside your scope)
+#   GET  /api/returns/         -> daily returns visible to your role, optional ?vehicle=<id>&date=YYYY-MM-DD
+#   POST /api/returns/         -> create a daily return from a JSON body (owners and drivers; 403 for SACCO admin)
 #
 # Authentication: the API uses the normal login session. Anonymous requests get
 #   a 401 JSON error instead of a redirect to the HTML login page.
+# Authorisation: uses vehicles_for(user), returns_for(user) and can_add_return(user)
+#   from accounts/roles.py, matching the HTML views.
 # CSRF: POST is still CSRF-protected (no csrf_exempt). A client sends the token
 #   from /api/csrf/ in the X-CSRFToken header, the same check the HTML forms pass.
 # Validation: POST data goes through DailyReturnForm, so the API enforces exactly
-#   the same rules as the web form (own vehicles only, no future dates ...).
+#   the same rules as the web form (allowed vehicles only, no future dates ...).
 # ==============================================================================
 
 import json
@@ -25,6 +27,8 @@ from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_http_methods
+
+from accounts.roles import can_add_return, returns_for, vehicles_for
 
 from .forms import DailyReturnForm
 from .models import DailyReturn, Vehicle
@@ -49,6 +53,7 @@ def vehicle_to_dict(vehicle: Vehicle) -> dict:
         "route": vehicle.route,
         "capacity": vehicle.capacity,
         "status": vehicle.status,
+        "driver": vehicle.driver.username if vehicle.driver_id else None,
     }
 
 
@@ -77,14 +82,14 @@ def csrf(request):
 @require_GET
 @api_login_required
 def vehicle_list(request):
-    vehicles = [vehicle_to_dict(v) for v in request.user.vehicles.all()]
+    vehicles = [vehicle_to_dict(v) for v in vehicles_for(request.user).select_related("driver")]
     return JsonResponse({"vehicles": vehicles})
 
 
 @require_GET
 @api_login_required
 def vehicle_detail(request, pk: int):
-    vehicle = get_object_or_404(Vehicle, pk=pk, owner=request.user)
+    vehicle = get_object_or_404(vehicles_for(request.user).select_related("driver"), pk=pk)
     return JsonResponse(vehicle_to_dict(vehicle))
 
 
@@ -94,7 +99,7 @@ def return_list(request):
     if request.method == "POST":
         return create_return(request)
 
-    returns = DailyReturn.objects.filter(vehicle__owner=request.user).select_related("vehicle", "recorded_by")
+    returns = returns_for(request.user).select_related("vehicle", "recorded_by")
 
     vehicle_id = request.GET.get("vehicle")
     if vehicle_id:
@@ -113,6 +118,8 @@ def return_list(request):
 
 
 def create_return(request):
+    if not can_add_return(request.user):
+        return JsonResponse({"error": "Your role cannot log daily returns."}, status=403)
     try:
         payload = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
