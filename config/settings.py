@@ -13,31 +13,59 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Settings that change between a laptop and a server come from environment
+# variables. A local .env file (copy .env.example) is loaded if it exists;
+# variables already set in the real environment win over the file.
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# Auto-generated dev key with 'django-insecure-'.
-# In Week 9 (Security), this will be loaded from an environment variable via python-dotenv / .env
-# Read from the environment; the fallback is only for local development.
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-#h@it)y2*dy$9^ig5fakqoc%5&6nyg%+&f$qvs#!1o6bl37nh-',
-)
+def env_list(name: str, default: str = '') -> list[str]:
+    """Read a comma-separated environment variable into a list."""
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # True gives detailed error tracebacks during development. Must be False in production
 # to avoid leaking sensitive server internals to visitors.
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-# When DEBUG=True, localhost/127.0.0.1 is allowed automatically.
-# In production, specific domain names (e.g., 'matatufleet.co.ke') must be listed
-# here to defend against HTTP Host Header injection attacks.
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+# It signs sessions, password-reset links and CSRF tokens. The fallback is only
+# for local development; the app refuses to start without a real key when DEBUG is off.
+DEV_SECRET_KEY = 'django-insecure-#h@it)y2*dy$9^ig5fakqoc%5&6nyg%+&f$qvs#!1o6bl37nh-'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', DEV_SECRET_KEY)
+if not DEBUG and SECRET_KEY == DEV_SECRET_KEY:
+    raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DJANGO_DEBUG=0.')
+
+# Hosts this site may be served on (defends against Host header attacks).
+# With DEBUG on, localhost and 127.0.0.1 are allowed automatically.
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
+# Render sets RENDER_EXTERNAL_HOSTNAME (e.g. matatu-fleet-log.onrender.com) for us.
+if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
+
+# Origins allowed to send POST forms over HTTPS. Defaults to https://<each allowed host>.
+CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS') or [
+    f'https://{host}' for host in ALLOWED_HOSTS if host not in ('localhost', '127.0.0.1')
+]
+
+# HTTPS-only settings, switched on whenever DEBUG is off (i.e. in production).
+if not DEBUG:
+    # The host's proxy terminates HTTPS and tells Django with this header.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True          # http:// -> https://
+    SESSION_COOKIE_SECURE = True        # session cookie only sent over HTTPS
+    CSRF_COOKIE_SECURE = True           # CSRF cookie only sent over HTTPS
+    # HSTS: browsers remember to use HTTPS only for this site.
+    SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', 60 * 60 * 24 * 365))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
 # Application definition
@@ -159,3 +187,6 @@ LOGOUT_REDIRECT_URL = 'fleet:home'   # after logout
 SESSION_COOKIE_AGE = 60 * 60 * 8         # a login lasts one 8-hour shift
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True   # shared phones/cyber PCs: closing the browser logs you out
 SESSION_COOKIE_HTTPONLY = True           # JavaScript can't read the session cookie
+# Already Django's defaults, written out so they are visible:
+SECURE_CONTENT_TYPE_NOSNIFF = True       # browsers must not guess file types
+X_FRAME_OPTIONS = 'DENY'                  # the site can't be framed (clickjacking)
