@@ -168,3 +168,14 @@ class DeleteTests(FleetTestCase):
         response = self.client.post(reverse("fleet:return_delete", args=[self.mine.pk]))
         self.assertEqual(response.status_code, 404)
         self.assertTrue(DailyReturn.objects.filter(pk=self.mine.pk).exists())
+
+
+class LayoutTests(FleetTestCase):
+    def test_pages_load_the_stylesheet(self):
+        response = self.client.get(reverse("fleet:home"))
+        self.assertContains(response, "css/style.css")
+
+    def test_list_buttons_link_to_delete(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("fleet:vehicle_list"))
+        self.assertContains(response, reverse("fleet:vehicle_delete", args=[self.vehicle.pk]))

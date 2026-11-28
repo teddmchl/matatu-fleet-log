@@ -1,6 +1,8 @@
+{% load static %}
 {% comment %}
 Project-level layout. Every page extends this and fills {% block content %}.
 The nav changes depending on request.user (available through the auth context processor).
+Styles live in static/css/style.css and are served through the staticfiles app.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="en">
@@ -8,40 +10,29 @@ The nav changes depending on request.user (available through the auth context pr
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Matatu Fleet Log{% endblock %}</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 920px; margin: 0 auto; padding: 0 16px; color: #1f2933; }
-        header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 2px solid #e4e7eb; }
-        nav a, nav button { margin-left: 12px; }
-        nav form { display: inline; }
-        nav button { background: none; border: none; color: #0b6bcb; cursor: pointer; font: inherit; padding: 0; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e7eb; }
-        td.num, th.num { text-align: right; }
-        .messages li { list-style: none; padding: 8px; background: #e3f8ec; margin-bottom: 6px; }
-        .errorlist { color: #b42318; }
-        form p { margin: 10px 0; }
-        label { display: block; font-weight: 600; }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <header>
-        <h1><a href="{% url 'fleet:home' %}">Matatu Fleet Log</a></h1>
-        <nav>
-            {% if user.is_authenticated %}
-                <a href="{% url 'fleet:vehicle_list' %}">Vehicles</a>
-                <a href="{% url 'fleet:return_list' %}">Daily returns</a>
-                <a href="{% url 'reports:summary' %}">Reports</a>
-                <a href="{% url 'accounts:profile' %}">Hi, {{ user.username }}</a>
-                {# Logout must be a POST in Django 5+, so it carries a CSRF token #}
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">Log out</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}">Log in</a>
-                <a href="{% url 'accounts:signup' %}">Sign up</a>
-            {% endif %}
-        </nav>
+    <header class="site-header">
+        <div class="inner">
+            <h1 class="brand"><a href="{% url 'fleet:home' %}">Matatu Fleet Log</a></h1>
+            <nav class="site-nav" aria-label="Main">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'fleet:vehicle_list' %}">Vehicles</a>
+                    <a href="{% url 'fleet:return_list' %}">Daily returns</a>
+                    <a href="{% url 'reports:summary' %}">Reports</a>
+                    <a href="{% url 'accounts:profile' %}">Hi, {{ user.username }}</a>
+                    {# Logout must be a POST in Django 5+, so it carries a CSRF token #}
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit">Log out</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}">Log in</a>
+                    <a href="{% url 'accounts:signup' %}">Sign up</a>
+                {% endif %}
+            </nav>
+        </div>
     </header>
 
     {% if messages %}
@@ -53,5 +44,9 @@ The nav changes depending on request.user (available through the auth context pr
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="site-footer">
+        <p>Matatu Fleet Log · daily returns for matatu owners and SACCOs</p>
+    </footer>
 </body>
 </html>

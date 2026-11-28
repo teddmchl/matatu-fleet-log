@@ -5,6 +5,7 @@
 {% block content %}
 <h2>My vehicles</h2>
 <p><a href="{% url 'fleet:vehicle_new' %}">+ Add a vehicle</a></p>
+<div class="table-wrap">
 <table>
     <tr><th>Plate</th><th>Route</th><th class="num">Capacity</th><th>Status</th><th></th></tr>
     {% for vehicle in vehicles %}
@@ -19,4 +20,5 @@
     <tr><td colspan="5">No vehicles yet.</td></tr>
     {% endfor %}
 </table>
+</div>
 {% endblock %}

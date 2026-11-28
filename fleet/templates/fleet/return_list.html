@@ -5,6 +5,7 @@
 {% block content %}
 <h2>Daily returns</h2>
 <p><a href="{% url 'fleet:return_new' %}">+ Log a return</a></p>
+<div class="table-wrap">
 <table>
     <tr>
         <th>Date</th><th>Vehicle</th><th class="num">Trips</th>
@@ -25,4 +26,5 @@
     <tr><td colspan="8">No returns logged yet.</td></tr>
     {% endfor %}
 </table>
+</div>
 {% endblock %}

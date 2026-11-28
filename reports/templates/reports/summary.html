@@ -10,6 +10,7 @@
     <a href="?period=30">{% if period == "30" %}<strong>last 30 days</strong>{% else %}last 30 days{% endif %}</a> ·
     <a href="?period=all">{% if period == "all" %}<strong>all time</strong>{% else %}all time{% endif %}</a>
 </p>
+<div class="table-wrap">
 <table>
     <tr>
         <th>Vehicle</th><th class="num">Days logged</th><th class="num">Trips</th>
@@ -36,4 +37,5 @@
     </tr>
     {% endif %}
 </table>
+</div>
 {% endblock %}

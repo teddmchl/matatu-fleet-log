@@ -5,13 +5,13 @@
 {% block content %}
 {% if user.is_authenticated %}
     <h2>Your fleet</h2>
-    <ul>
+    <ul class="stats">
         <li>Vehicles: <strong>{{ vehicle_count }}</strong></li>
         <li>Daily returns logged: <strong>{{ return_count }}</strong></li>
         <li>Total collections: <strong>KES {{ total_collections|floatformat:2 }}</strong></li>
     </ul>
     <p>
-        <a href="{% url 'fleet:return_new' %}">Log today's return</a> ·
+        <a class="button" href="{% url 'fleet:return_new' %}">Log today's return</a>
         <a href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>
     </p>
 {% else %}
