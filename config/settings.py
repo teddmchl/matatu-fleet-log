@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -88,6 +89,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise serves the collected static files (CSS) straight from gunicorn,
+    # so the app needs no separate web server for them. Must sit right after SecurityMiddleware.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -121,12 +125,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-# SQLite is used for local development. We migrate to PostgreSQL in Week 6.
+# DATABASE_URL picks the database, e.g. postgres://user:pass@host:5432/matatu
+# (most hosts give you this string). Without it we use a local SQLite file.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,   # reuse Postgres connections between requests
+    )
 }
 
 
@@ -168,6 +173,21 @@ USE_TZ = True
 STATIC_URL = 'static/'
 # Project-wide static files (static/css/style.css) live here, next to manage.py.
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# `python manage.py collectstatic` copies every static file here for production.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    # In production WhiteNoise serves compressed files with a hash in the name
+    # (style.4f2a1c.css), so browsers can cache them forever and still get updates.
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
+    },
+}
 
 
 # Email
