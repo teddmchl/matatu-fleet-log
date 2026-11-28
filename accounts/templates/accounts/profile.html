@@ -4,18 +4,18 @@
 
 {% block content %}
 <h2>Your account</h2>
-<ul>
-    <li>Username: <strong>{{ user.username }}</strong></li>
-    <li>Role: <strong>{{ role_label }}</strong></li>
-    <li>Email: {{ user.email|default:"not set" }}</li>
-    <li>Member since: {{ user.date_joined|date:"j M Y" }}</li>
-    <li>Last login: {{ user.last_login|date:"j M Y, H:i" }}</li>
+<ul class="detail-list">
+    <li><span class="detail-label">Username</span><strong>{{ user.username }}</strong></li>
+    <li><span class="detail-label">Role</span><span class="badge badge-active">{{ role_label }}</span></li>
+    <li><span class="detail-label">Email</span><span>{{ user.email|default:"not set" }}</span></li>
+    <li><span class="detail-label">Member since</span><span class="mono">{{ user.date_joined|date:"j M Y" }}</span></li>
+    <li><span class="detail-label">Last login</span><span class="mono">{{ user.last_login|date:"j M Y, H:i" }}</span></li>
 </ul>
 
 <h3>This session</h3>
-<ul>
-    <li>Expires: {{ session_expires|date:"j M Y, H:i" }}{% if expires_at_browser_close %} or when you close the browser{% endif %}</li>
-    <li>Last vehicle remembered: {{ last_vehicle_id|default:"none yet" }}</li>
+<ul class="detail-list">
+    <li><span class="detail-label">Expires</span><span>{{ session_expires|date:"j M Y, H:i" }}{% if expires_at_browser_close %} or when you close the browser{% endif %}</span></li>
+    <li><span class="detail-label">Last vehicle remembered</span><span class="mono">{{ last_vehicle_id|default:"none yet" }}</span></li>
 </ul>
-<p><a href="{% url 'password_change' %}">Change password</a></p>
+<p class="actions"><a class="button button-secondary" href="{% url 'password_change' %}">Change password</a></p>
 {% endblock %}

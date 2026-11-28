@@ -3,28 +3,30 @@
 {% block title %}Daily returns | Matatu Fleet Log{% endblock %}
 
 {% block content %}
-<h2>Daily returns</h2>
-{% if is_owner or is_driver %}<p><a href="{% url 'fleet:return_new' %}">+ Log a return</a></p>{% endif %}
+<div class="page-head">
+    <h2>Daily returns</h2>
+    {% if is_owner or is_driver %}<a class="button" href="{% url 'fleet:return_new' %}">+ Log a return</a>{% endif %}
+</div>
 <div class="table-wrap">
 <table>
     <tr>
         <th>Date</th><th>Vehicle</th><th class="num">Trips</th>
-        <th class="num">Collections</th><th class="num">Fuel</th><th class="num">Other</th><th class="num">Net</th><th>Recorded by</th><th></th>
+        <th class="num">Collections</th><th class="num">Fuel</th><th class="num">Other</th><th class="num">Net</th><th>Recorded by</th>{% if not is_sacco_admin %}<th></th>{% endif %}
     </tr>
     {% for r in returns %}
     <tr>
-        <td>{{ r.date }}</td>
-        <td>{{ r.vehicle.plate }}</td>
+        <td class="nowrap mono">{{ r.date }}</td>
+        <td class="nowrap plate">{{ r.vehicle.plate }}</td>
         <td class="num">{{ r.trips }}</td>
         <td class="num">{{ r.collections|floatformat:2 }}</td>
         <td class="num">{{ r.fuel|floatformat:2 }}</td>
         <td class="num">{{ r.other_expenses|floatformat:2 }}</td>
         <td class="num"><strong>{{ r.net|floatformat:2 }}</strong></td>
         <td>{{ r.recorded_by.username }}</td>
-        <td>{% if r.pk in editable_ids %}<a href="{% url 'fleet:return_edit' r.pk %}">Edit</a> · <a href="{% url 'fleet:return_delete' r.pk %}">Delete</a>{% endif %}</td>
+        {% if not is_sacco_admin %}<td class="nowrap row-actions">{% if r.pk in editable_ids %}<a href="{% url 'fleet:return_edit' r.pk %}">Edit</a> · <a href="{% url 'fleet:return_delete' r.pk %}">Delete</a>{% endif %}</td>{% endif %}
     </tr>
     {% empty %}
-    <tr><td colspan="9">No returns logged yet.</td></tr>
+    <tr><td colspan="{% if is_sacco_admin %}8{% else %}9{% endif %}">No returns logged yet.</td></tr>
     {% endfor %}
 </table>
 </div>

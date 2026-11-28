@@ -1,0 +1,12 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Matatu Fleet Log mark">
+  <defs>
+    <clipPath id="matatu-mark-clip">
+      <rect width="120" height="120" rx="28"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#matatu-mark-clip)">
+    <rect width="120" height="120" fill="#000000"/>
+    <rect x="0" y="48" width="120" height="24" fill="#FFC400"/>
+    <path d="M26 88V32h11l23 30 23-30h11v56H83V50L60 79 37 50v38H26z" fill="#FFFFFF"/>
+  </g>
+</svg>

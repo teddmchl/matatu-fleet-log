@@ -4,21 +4,28 @@
 
 {% block content %}
 {% if user.is_authenticated %}
-    <h2>Your fleet</h2>
+    <h2>{% if is_sacco_admin %}SACCO fleet{% elif is_driver %}Your assigned vehicles{% else %}Your fleet{% endif %}</h2>
     <ul class="stats">
-        <li>Vehicles: <strong>{{ vehicle_count }}</strong></li>
-        <li>Daily returns logged: <strong>{{ return_count }}</strong></li>
-        <li>Total collections: <strong>KES {{ total_collections|floatformat:2 }}</strong></li>
+        <li><span class="stat-label">Vehicles</span><strong>{{ vehicle_count }}</strong></li>
+        <li><span class="stat-label">Daily returns logged</span><strong>{{ return_count }}</strong></li>
+        <li><span class="stat-label">Total collections</span><strong>KES {{ total_collections|floatformat:2 }}</strong></li>
     </ul>
     {% if is_owner or is_driver %}
-    <p>
+    <p class="actions">
         <a class="button" href="{% url 'fleet:return_new' %}">Log today's return</a>
-        {% if is_owner %}<a href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>{% endif %}
+        {% if is_owner %}<a class="button button-secondary" href="{% url 'fleet:vehicle_new' %}">Add a vehicle</a>{% endif %}
     </p>
+    {% elif is_sacco_admin %}
+    <p class="actions"><a class="button" href="{% url 'reports:summary' %}">View whole-fleet report</a></p>
     {% endif %}
 {% else %}
-    <h2>Welcome</h2>
-    <p>Track what every matatu earned and spent each day.</p>
-    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'accounts:signup' %}">create an account</a> to start.</p>
+    <section class="hero-band">
+        <h2>Daily returns for your matatu fleet</h2>
+        <p>Track what each matatu collected and spent every day — across owners, assigned drivers, and your SACCO.</p>
+        <p class="actions">
+            <a class="button" href="{% url 'accounts:signup' %}">Create an account</a>
+            <a class="button button-secondary" href="{% url 'login' %}">Log in</a>
+        </p>
+    </section>
 {% endif %}
 {% endblock %}
