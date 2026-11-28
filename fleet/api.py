@@ -127,4 +127,5 @@ def create_return(request):
     daily_return = form.save(commit=False)
     daily_return.recorded_by = request.user
     daily_return.save()
+    daily_return.refresh_from_db()  # reload so amounts come back as stored, e.g. "9500.00"
     return JsonResponse(return_to_dict(daily_return), status=201)

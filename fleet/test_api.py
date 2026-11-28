@@ -92,6 +92,10 @@ class ApiCreateTests(ApiTestCase):
         self.assertEqual(created.recorded_by, self.owner)
         self.assertEqual(response.json()["net"], "5200.00")
 
+    def test_created_amounts_match_what_get_returns(self):
+        response = self.post_json(self.return_data(collections="9500"))
+        self.assertEqual(response.json()["collections"], "9500.00")
+
     def test_form_rules_apply_to_the_api(self):
         response = self.post_json(self.return_data(vehicle=self.other_vehicle.pk))
         self.assertEqual(response.status_code, 400)
